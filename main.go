@@ -10,36 +10,38 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 type User struct {
 	ID      int    `json:"id"`
-	Name    string `json:"Name"`
-	Surname string `json:"Surname"`
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
 }
-
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "postgres"
-	dbname = "db_1"
-)
-
-var password = os.Getenv("DB_PASSWORD")
 
 var db *sql.DB
 
 func main() {
-	if password == "" {
-		log.Println("Ошибка - переменная среды DB_PASSWORD не установлена")
-		return
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Ошибка загрузки .env", err)
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", // Строка подключения
-		host, port, user, password, dbname)
+	host := os.Getenv("DB_HOST")
+	Port := os.Getenv("DB_PORT")
+	port, err := strconv.Atoi(Port)
+	if err != nil {
+		log.Fatal("Ошибка port", err)
+	}
+	user := os.Getenv("DB_USER")
+	dbname := os.Getenv("DB_NAME")
+	password := os.Getenv("DB_PASSWORD")
 
-	var err error // Подключение к базе данных
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", // Строка подключения
+		host, port, user, dbname, password)
+
+	// Подключение к базе данных
 	db, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/users", getUsers) //обьявление обработчиков
+	http.HandleFunc("/users", getUser) //обьявление обработчиков
 	http.HandleFunc("/users/create", CreateUser)
 	http.HandleFunc("/users/delete", DeleteUser)
 	log.Println("Сервер запущен на http://localhost:8080")
@@ -58,7 +60,7 @@ func main() {
 
 }
 
-func getUsers(w http.ResponseWriter, r *http.Request) { //обработчик GET запросов
+func getUser(w http.ResponseWriter, r *http.Request) { //обработчик GET запросов
 	if r.Method != http.MethodGet {
 		http.Error(w, "Ошибка метода", http.StatusMethodNotAllowed)
 		return
